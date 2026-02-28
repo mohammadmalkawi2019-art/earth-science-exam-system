@@ -2,201 +2,151 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>نظام اختبار علوم الأرض</title>
+<title>نظام الاختبار</title>
 <style>
-body {
-    font-family: Arial;
-    background:#f4f6f9;
-    text-align:center;
-}
-.container {
-    width:60%;
-    margin:auto;
-    background:white;
-    padding:30px;
-    margin-top:50px;
-    border-radius:10px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
-button {
-    padding:10px 20px;
-    margin:10px;
-    font-size:16px;
-    cursor:pointer;
-}
-.progress-bar {
-    height:20px;
-    background:#ddd;
-    border-radius:10px;
-    overflow:hidden;
-    margin-bottom:20px;
-}
-.progress {
-    height:100%;
-    background:#4CAF50;
-    width:0%;
-}
-.timer {
-    font-size:20px;
-    color:red;
-    margin-bottom:15px;
-}
-.option {
-    display:block;
-    margin:10px 0;
-}
+body{font-family:Arial;background:#f4f6f9;text-align:center}
+.container{width:60%;margin:auto;background:#fff;padding:30px;margin-top:40px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,.1)}
+button{padding:10px 20px;margin:10px;cursor:pointer}
+.progress-bar{height:20px;background:#ddd;border-radius:10px;overflow:hidden;margin:20px 0}
+.progress{height:100%;background:#4CAF50;width:0%}
+.timer{color:red;font-size:18px;margin-bottom:10px}
+.option{display:block;margin:8px 0}
 </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>اختبار علوم الأرض</h2>
-    <div id="start-screen">
-        <button onclick="startExam()">ابدأ الاختبار</button>
-    </div>
+<h2>اختبار علوم الأرض</h2>
 
-    <div id="quiz-screen" style="display:none;">
-        <div class="timer">الوقت المتبقي: <span id="time">75</span> ثانية</div>
-        <div class="progress-bar">
-            <div class="progress" id="progress"></div>
-        </div>
-        <h3 id="question"></h3>
-        <div id="options"></div>
-        <button onclick="nextQuestion()">التالي</button>
-    </div>
+<div id="start">
+<button onclick="startExam()">ابدأ الاختبار</button>
+</div>
 
-    <div id="result-screen" style="display:none;">
-        <h3>النتيجة النهائية</h3>
-        <p id="result-details"></p>
-        <button onclick="location.reload()">إعادة الاختبار</button>
-    </div>
+<div id="quiz" style="display:none;">
+<div class="timer">الوقت المتبقي: <span id="time">75</span></div>
+<div class="progress-bar"><div class="progress" id="progress"></div></div>
+<h3 id="question"></h3>
+<div id="options"></div>
+<button onclick="nextQuestion()">التالي</button>
+</div>
+
+<div id="result" style="display:none;">
+<h3>النتيجة النهائية</h3>
+<div id="resultText"></div>
+<button onclick="location.reload()">إعادة الاختبار</button>
+</div>
+
 </div>
 
 <script>
-// ضع هنا جميع الأسئلة (سأضع نموذج 5 فقط الآن للتجربة)
-const allQuestions = [
-    {
-        question:"الجهاز المستخدم لقياس سرعة الرياح هو:",
-        options:["مقياس المطر","مقياس بيفورت","الأنيمومتر","مسطرة القياس"],
-        correct:2
-    },
-    {
-        question:"الإعصار القمعي يُصنف وفق مقياس:",
-        options:["بيفورت","ريختر","فوجيتا","سفير-سمبسون"],
-        correct:2
-    },
-    {
-        question:"يُقصد بالتغير المناخي:",
-        options:["تغير يومي","تغير طويل الأمد","عاصفة","انخفاض مؤقت"],
-        correct:1
-    },
-    {
-        question:"يتكون المطر نتيجة:",
-        options:["تجمد الهواء","تبخر التربة","زيادة حجم القطرات","انخفاض الضغط"],
-        correct:2
-    },
-    {
-        question:"مركز الإعصار المداري يسمى:",
-        options:["الجبهة","العين","النواة","القمع"],
-        correct:1
-    }
-];
 
-// سيتم اختيار 50 لاحقاً بعد إضافة كل الأسئلة
-let questions = [];
-let currentIndex = 0;
-let score = 0;
-let timer;
-let timeLeft = 75;
-let userAnswers = [];
+let allQuestions=[]
+let questions=[]
+let current=0
+let score=0
+let timer
+let timeLeft=75
+let unanswered=0
 
-function shuffle(array){
-    return array.sort(()=>Math.random()-0.5);
+async function loadQuestions(){
+const files=["galaxies.json","earth.json","weather.json"]
+for(let file of files){
+let res=await fetch(file)
+let data=await res.json()
+allQuestions=allQuestions.concat(data)
+}
 }
 
-function startExam(){
-    questions = shuffle([...allQuestions]).slice(0,50);
-    document.getElementById("start-screen").style.display="none";
-    document.getElementById("quiz-screen").style.display="block";
-    showQuestion();
+function shuffle(arr){
+return arr.sort(()=>Math.random()-0.5)
+}
+
+async function startExam(){
+await loadQuestions()
+questions=shuffle([...allQuestions]).slice(0,50)
+document.getElementById("start").style.display="none"
+document.getElementById("quiz").style.display="block"
+showQuestion()
 }
 
 function showQuestion(){
-    if(currentIndex>=questions.length){
-        showResult();
-        return;
-    }
+if(current>=questions.length){showResult();return}
 
-    timeLeft=75;
-    document.getElementById("time").textContent=timeLeft;
+timeLeft=75
+document.getElementById("time").textContent=timeLeft
 
-    let q=questions[currentIndex];
-    document.getElementById("question").textContent=
-    `(${currentIndex+1}/50) ${q.question}`;
+let q=questions[current]
+document.getElementById("question").textContent=`(${current+1}/50) ${q.question}`
 
-    let optionsHTML="";
-    q.options.forEach((opt,i)=>{
-        optionsHTML+=`<label class="option">
-        <input type="radio" name="option" value="${i}">
-        ${opt}
-        </label>`;
-    });
+let html=""
+q.options.forEach((opt,i)=>{
+html+=`<label class="option">
+<input type="radio" name="opt" value="${i}">
+${opt}
+</label>`
+})
 
-    document.getElementById("options").innerHTML=optionsHTML;
-    updateProgress();
-    startTimer();
+document.getElementById("options").innerHTML=html
+updateProgress()
+startTimer()
 }
 
 function startTimer(){
-    clearInterval(timer);
-    timer=setInterval(()=>{
-        timeLeft--;
-        document.getElementById("time").textContent=timeLeft;
-        if(timeLeft<=0){
-            clearInterval(timer);
-            nextQuestion();
-        }
-    },1000);
+clearInterval(timer)
+timer=setInterval(()=>{
+timeLeft--
+document.getElementById("time").textContent=timeLeft
+if(timeLeft<=0){
+clearInterval(timer)
+nextQuestion()
+}
+},1000)
 }
 
 function nextQuestion(){
-    clearInterval(timer);
+clearInterval(timer)
 
-    let selected=document.querySelector('input[name="option"]:checked');
-    if(selected){
-        if(parseInt(selected.value)===questions[currentIndex].correct){
-            score++;
-        }
-    }
+let selected=document.querySelector('input[name="opt"]:checked')
+if(selected){
+if(parseInt(selected.value)===questions[current].correct){
+score++
+}
+}else{
+unanswered++
+}
 
-    currentIndex++;
-    showQuestion();
+current++
+showQuestion()
 }
 
 function updateProgress(){
-    let percent=((currentIndex)/50)*100;
-    document.getElementById("progress").style.width=percent+"%";
+let percent=(current/50)*100
+document.getElementById("progress").style.width=percent+"%"
 }
 
 function showResult(){
-    document.getElementById("quiz-screen").style.display="none";
-    document.getElementById("result-screen").style.display="block";
+document.getElementById("quiz").style.display="none"
+document.getElementById("result").style.display="block"
 
-    let percentage=Math.round((score/50)*100);
+let percent=Math.round((score/50)*100)
 
-    let grade="";
-    if(percentage>=90) grade="ممتاز";
-    else if(percentage>=80) grade="جيد جداً";
-    else if(percentage>=70) grade="جيد";
-    else if(percentage>=60) grade="مقبول";
-    else grade="ضعيف";
+let grade=""
+if(percent>=90) grade="ممتاز"
+else if(percent>=80) grade="جيد جداً"
+else if(percent>=70) grade="جيد"
+else if(percent>=60) grade="مقبول"
+else grade="ضعيف"
 
-    document.getElementById("result-details").innerHTML=
-    `عدد الأسئلة: 50 <br>
-    الإجابات الصحيحة: ${score} <br>
-    النسبة المئوية: ${percentage}% <br>
-    التقدير: ${grade}`;
+document.getElementById("resultText").innerHTML=
+`
+عدد الأسئلة: 50<br>
+الإجابات الصحيحة: ${score}<br>
+غير المجابة: ${unanswered}<br>
+النسبة المئوية: ${percent}%<br>
+التقدير: ${grade}
+`
 }
+
 </script>
 
 </body>
