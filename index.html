@@ -13,7 +13,7 @@ text-align:center;
 }
 
 .container{
-width:80%;
+width:85%;
 margin:auto;
 background:#ffffff;
 margin-top:30px;
@@ -139,7 +139,7 @@ let startTime
 let totalTime=0
 let answers=[]
 
-// ================= START EXAM =================
+// بدء الاختبار
 async function startExam(){
 
 student=document.getElementById("studentName").value.trim()
@@ -152,7 +152,7 @@ let file=document.getElementById("unitSelect").value
 let res=await fetch(file)
 let all=await res.json()
 
-// تقسيم حسب المستوى العربي
+// تقسيم حسب المستوى
 let easy=all.filter(q=>q.level==="سهل")
 let medium=all.filter(q=>q.level==="متوسط")
 let hard=all.filter(q=>q.level==="صعب")
@@ -161,7 +161,7 @@ function randomPick(arr,count){
 return arr.sort(()=>Math.random()-0.5).slice(0,count)
 }
 
-// توزيع 50 سؤال متوازن
+// 50 سؤال متوازن
 questions=[
 ...randomPick(easy,20),
 ...randomPick(medium,15),
@@ -183,7 +183,7 @@ document.getElementById("studentDisplay").innerText="الطالب: "+student
 showQuestion()
 }
 
-// ================= SHOW QUESTION =================
+// عرض السؤال
 function showQuestion(){
 
 if(current>=50){
@@ -212,7 +212,7 @@ updateProgress()
 startTimer()
 }
 
-// ================= TIMER =================
+// المؤقت
 function startTimer(){
 clearInterval(timer)
 timer=setInterval(()=>{
@@ -225,7 +225,7 @@ nextQuestion()
 },1000)
 }
 
-// ================= NEXT QUESTION =================
+// التالي
 function nextQuestion(){
 clearInterval(timer)
 
@@ -245,13 +245,13 @@ current++
 showQuestion()
 }
 
-// ================= PROGRESS =================
+// شريط التقدم
 function updateProgress(){
 let percent=(current/50)*100
 document.getElementById("progressBar").style.width=percent+"%"
 }
 
-// ================= RESULT =================
+// النتيجة
 function showResult(){
 
 document.getElementById("quizScreen").style.display="none"
@@ -269,7 +269,7 @@ document.getElementById("resultContent").innerHTML=
 `
 }
 
-// ================= REVIEW =================
+// المراجعة
 function showReview(){
 
 document.getElementById("resultScreen").style.display="none"
@@ -298,7 +298,7 @@ ${a.question.options[correctAnswer]}
 document.getElementById("reviewContent").innerHTML=html
 }
 
-// ================= HOME =================
+// العودة للرئيسية
 function goHome(){
 location.reload()
 }
