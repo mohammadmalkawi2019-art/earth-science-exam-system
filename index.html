@@ -83,20 +83,44 @@ let data=await res.json()
 
 let allQuestions=[]
 
+// ===== يدعم الشكل الأول (lessons) =====
+if(data.lessons){
 data.lessons.forEach(lesson=>{
 lesson.questions.forEach(q=>{
+allQuestions.push(convertQuestion(q))
+})
+})
+}
 
-// تحويل حرف الإجابة إلى رقم
-let correctIndex = q.options.findIndex(opt=>opt.startsWith(q.correct_answer))
+// ===== يدعم الشكل الثاني (questions ككائن مجموعات) =====
+if(data.questions && typeof data.questions === "object"){
+Object.values(data.questions).forEach(group=>{
+group.forEach(q=>{
+allQuestions.push(convertQuestion(q))
+})
+})
+}
 
-allQuestions.push({
+// تحويل السؤال لشكل موحد
+function convertQuestion(q){
+
+let correctIndex=0
+
+if(q.correct_answer){
+correctIndex = q.options.findIndex(opt=>opt===q.correct_answer || opt.startsWith(q.correct_answer))
+}
+
+return {
 question:q.question,
 options:q.options,
 correct:correctIndex
-})
+}
+}
 
-})
-})
+if(allQuestions.length===0){
+alert("لم يتم العثور على أسئلة في الملف")
+return
+}
 
 questions = allQuestions.sort(()=>Math.random()-0.5).slice(0,50)
 
@@ -113,7 +137,6 @@ showQuestion()
 }
 
 function showQuestion(){
-
 if(current>=questions.length){ showResult(); return }
 
 timeLeft=70
