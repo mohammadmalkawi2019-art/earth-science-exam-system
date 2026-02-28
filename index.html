@@ -49,7 +49,11 @@ let timeLeft=75
 let unanswered=0
 
 async function loadQuestions(){
-const files=["galaxies.json","earth.json","weather.json"]
+const files=const files=[
+"المجرات.json",
+"تاريخ_الأرض.json",
+"احوال_الطقس_القاسية.json"
+]
 for(let file of files){
 let res=await fetch(file)
 let data=await res.json()
