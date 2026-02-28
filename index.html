@@ -2,226 +2,229 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>نظام اختبار علوم الأرض</title>
-
+<title>نظام الاختبار الإلكتروني</title>
 <style>
-body{font-family:Arial;background:#eef2f7;margin:0;text-align:center;}
-.container{width:85%;margin:auto;background:#fff;margin-top:30px;padding:30px;border-radius:12px;box-shadow:0 0 15px rgba(0,0,0,0.1);}
-button{padding:10px 20px;margin:10px;cursor:pointer;border:none;background:#4CAF50;color:white;border-radius:6px;font-size:15px;}
-button:hover{opacity:0.9;}
-input,select{padding:8px;margin:10px;width:250px;}
-.progress-bar{height:20px;background:#ddd;border-radius:10px;overflow:hidden;margin:20px 0;}
-.progress{height:100%;background:#4CAF50;width:0%;}
-.timer{color:red;font-weight:bold;margin-bottom:10px;}
-.option{display:block;margin:8px 0;}
-.correct{color:green;font-weight:bold;}
-.wrong{color:red;font-weight:bold;}
-.footer{margin-top:20px;font-size:14px;color:#555;}
+body{font-family:Tahoma;background:#f4f6fb;margin:0}
+header,footer{background:#1e88e5;color:#fff;padding:12px;text-align:center}
+.container{max-width:900px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 0 10px rgba(0,0,0,.1)}
+button{padding:10px 18px;margin:8px;border:none;border-radius:8px;background:#1e88e5;color:#fff;cursor:pointer}
+button:hover{background:#1565c0}
+.hidden{display:none}
+.option{display:block;margin:8px 0;padding:8px;border:1px solid #ddd;border-radius:8px;cursor:pointer}
+.timer{font-weight:bold;color:#d32f2f}
+select,input{padding:8px;border-radius:6px;border:1px solid #ccc}
+.review-box{margin:10px 0;padding:10px;border:1px solid #ccc;border-radius:8px}
+.correct{color:green}
+.wrong{color:red}
 </style>
 </head>
-
 <body>
 
-<div class="container">
-<h2>اختبار علوم الأرض</h2>
+<header>نظام الاختبار الإلكتروني</header>
 
-<div id="startScreen">
-<input type="text" id="studentName" placeholder="أدخل اسم الطالب"><br>
+<div class="container">
+
+<!-- الشاشة الرئيسية -->
+<div id="home">
+<h3>إعداد المعلم: محمد ملكاوي</h3>
+<label>اسم الطالب:</label>
+<input type="text" id="studentName"><br><br>
+
+<label>اختر الوحدة:</label>
 <select id="unitSelect">
-<option value="galaxies.json">وحدة المجرات</option>
-<option value="earth.json">وحدة تاريخ الأرض</option>
-<option value="weather.json">وحدة أحوال الطقس القاسية</option>
-</select><br>
-<button onclick="startExam()">ابدأ الاختبار</button>
+<option value="احوال الطقس القاسية.json">أحوال الطقس القاسية</option>
+<option value="المجرات.json">المجرات ونشأة الكون</option>
+<option value="تاريخ الارض.json">تاريخ الأرض</option>
+</select><br><br>
+
+<button onclick="startExam()">بدء الاختبار</button>
 </div>
 
-<div id="quizScreen" style="display:none;">
-<h3 id="studentDisplay"></h3>
-<div class="timer">الوقت المتبقي: <span id="timeLeft">70</span> ثانية</div>
-<div class="progress-bar"><div class="progress" id="progressBar"></div></div>
+<!-- شاشة الاختبار -->
+<div id="exam" class="hidden">
+<div>الوقت المتبقي: <span class="timer" id="timer">70</span> ثانية</div>
 <h3 id="questionText"></h3>
 <div id="optionsBox"></div>
-<button onclick="nextQuestion()">التالي</button>
+<button onclick="nextQuestion()">السؤال التالي</button>
 <button onclick="goHome()">العودة للرئيسية</button>
 </div>
 
-<div id="resultScreen" style="display:none;">
+<!-- شاشة النتيجة -->
+<div id="result" class="hidden">
 <h3>النتيجة النهائية</h3>
-<div id="resultContent"></div>
-<button onclick="showReview()">مراجعة الإجابات</button>
+<p id="finalScore"></p>
+<p id="totalTime"></p>
+<div id="review"></div>
 <button onclick="goHome()">العودة للرئيسية</button>
 </div>
 
-<div id="reviewScreen" style="display:none;">
-<h3>مراجعة الإجابات</h3>
-<div id="reviewContent"></div>
-<button onclick="goHome()">العودة للرئيسية</button>
 </div>
 
-<div class="footer">إعداد المعلم محمد ملكاوي</div>
-</div>
+<footer>إعداد المعلم محمد ملكاوي</footer>
 
 <script>
+let questions = [];
+let selectedQuestions = [];
+let currentIndex = 0;
+let score = 0;
+let timerInterval;
+let timeLeft = 70;
+let totalSeconds = 0;
+let answersReview = [];
 
-let questions=[]
-let current=0
-let score=0
-let timer
-let timeLeft=70
-let student=""
-let startTime
-let answers=[]
+/* ========= مرونة قراءة أي JSON ========= */
+function normalizeQuestions(data){
+let all=[];
+if(data.questions){
+for(let key in data.questions){
+if(Array.isArray(data.questions[key])){
+all=all.concat(data.questions[key]);
+}
+}
+}
+if(Array.isArray(data)) all=data;
 
+return all.map(q=>{
+let options=q.options||[];
+let correct=q.correct_answer;
+if(correct==="أ") correct=options[0];
+if(correct==="ب") correct=options[1];
+if(correct==="ج") correct=options[2];
+if(correct==="د") correct=options[3];
+return {question:q.question,options:options,correct_answer:correct};
+});
+}
+
+/* ========= بدء الاختبار ========= */
 async function startExam(){
+const name=document.getElementById("studentName").value.trim();
+if(!name){alert("أدخل اسم الطالب");return;}
 
-student=document.getElementById("studentName").value.trim()
-if(student===""){ alert("يرجى إدخال اسم الطالب"); return }
+const file=document.getElementById("unitSelect").value;
+const response=await fetch(file);
+const data=await response.json();
+questions=normalizeQuestions(data);
 
-let file=document.getElementById("unitSelect").value
-let res=await fetch(file)
-let data=await res.json()
-
-let allQuestions=[]
-
-// ===== يدعم الشكل الأول (lessons) =====
-if(data.lessons){
-data.lessons.forEach(lesson=>{
-lesson.questions.forEach(q=>{
-allQuestions.push(convertQuestion(q))
-})
-})
+if(questions.length<50){
+alert("عدد الأسئلة أقل من 50 — سيتم استخدام جميع الأسئلة المتاحة");
+selectedQuestions=shuffle([...questions]);
+}else{
+selectedQuestions=shuffle([...questions]).slice(0,50);
 }
 
-// ===== يدعم الشكل الثاني (questions ككائن مجموعات) =====
-if(data.questions && typeof data.questions === "object"){
-Object.values(data.questions).forEach(group=>{
-group.forEach(q=>{
-allQuestions.push(convertQuestion(q))
-})
-})
+currentIndex=0;
+score=0;
+totalSeconds=0;
+answersReview=[];
+
+document.getElementById("home").classList.add("hidden");
+document.getElementById("exam").classList.remove("hidden");
+
+showQuestion();
 }
 
-// تحويل السؤال لشكل موحد
-function convertQuestion(q){
-
-let correctIndex=0
-
-if(q.correct_answer){
-correctIndex = q.options.findIndex(opt=>opt===q.correct_answer || opt.startsWith(q.correct_answer))
-}
-
-return {
-question:q.question,
-options:q.options,
-correct:correctIndex
-}
-}
-
-if(allQuestions.length===0){
-alert("لم يتم العثور على أسئلة في الملف")
-return
-}
-
-questions = allQuestions.sort(()=>Math.random()-0.5).slice(0,50)
-
-current=0
-score=0
-answers=[]
-startTime=Date.now()
-
-document.getElementById("startScreen").style.display="none"
-document.getElementById("quizScreen").style.display="block"
-document.getElementById("studentDisplay").innerText="الطالب: "+student
-
-showQuestion()
-}
-
+/* ========= عرض السؤال ========= */
 function showQuestion(){
-if(current>=questions.length){ showResult(); return }
+resetTimer();
+const q=selectedQuestions[currentIndex];
+document.getElementById("questionText").innerText=
+`(${currentIndex+1}) ${q.question}`;
+const box=document.getElementById("optionsBox");
+box.innerHTML="";
 
-timeLeft=70
-document.getElementById("timeLeft").textContent=timeLeft
-
-let q=questions[current]
-document.getElementById("questionText").innerText=`(${current+1}/50) ${q.question}`
-
-let html=""
-q.options.forEach((opt,i)=>{
-html+=`<label class="option">
-<input type="radio" name="option" value="${i}">${opt}
-</label>`
-})
-
-document.getElementById("optionsBox").innerHTML=html
-updateProgress()
-startTimer()
+q.options.forEach(opt=>{
+const div=document.createElement("div");
+div.className="option";
+div.innerText=opt;
+div.onclick=()=>selectAnswer(opt);
+box.appendChild(div);
+});
 }
 
-function startTimer(){
-clearInterval(timer)
-timer=setInterval(()=>{
-timeLeft--
-document.getElementById("timeLeft").textContent=timeLeft
-if(timeLeft<=0){ clearInterval(timer); nextQuestion() }
-},1000)
+/* ========= اختيار إجابة ========= */
+function selectAnswer(selected){
+const q=selectedQuestions[currentIndex];
+if(selected===q.correct_answer) score++;
+
+answersReview.push({
+question:q.question,
+correct:q.correct_answer,
+selected:selected
+});
+
+clearInterval(timerInterval);
+nextQuestion();
 }
 
+/* ========= التالي ========= */
 function nextQuestion(){
-clearInterval(timer)
-
-let selected=document.querySelector('input[name="option"]:checked')
-let userAnswer=selected?parseInt(selected.value):null
-
-answers.push({question:questions[current],user:userAnswer})
-
-if(userAnswer===questions[current].correct){ score++ }
-
-current++
-showQuestion()
+currentIndex++;
+if(currentIndex>=selectedQuestions.length){
+endExam();
+}else{
+showQuestion();
+}
 }
 
-function updateProgress(){
-let percent=(current/50)*100
-document.getElementById("progressBar").style.width=percent+"%"
+/* ========= انتهاء ========= */
+function endExam(){
+document.getElementById("exam").classList.add("hidden");
+document.getElementById("result").classList.remove("hidden");
+
+document.getElementById("finalScore").innerText=
+`الدرجة: ${score} / ${selectedQuestions.length}`;
+
+document.getElementById("totalTime").innerText=
+`الوقت المستغرق: ${totalSeconds} ثانية`;
+
+let reviewBox=document.getElementById("review");
+reviewBox.innerHTML="<h4>مراجعة الإجابات:</h4>";
+
+answersReview.forEach(r=>{
+let div=document.createElement("div");
+div.className="review-box";
+div.innerHTML=
+`<strong>${r.question}</strong><br>
+إجابتك: <span class="${r.selected===r.correct?'correct':'wrong'}">${r.selected}</span><br>
+الإجابة الصحيحة: <span class="correct">${r.correct}</span>`;
+reviewBox.appendChild(div);
+});
 }
 
-function showResult(){
-document.getElementById("quizScreen").style.display="none"
-document.getElementById("resultScreen").style.display="block"
-
-let totalTime=Math.floor((Date.now()-startTime)/1000)
-let percent=Math.round((score/50)*100)
-
-document.getElementById("resultContent").innerHTML=
-`الطالب: ${student}<br><br>
-عدد الإجابات الصحيحة: ${score} من 50<br>
-النسبة المئوية: ${percent}%<br>
-الوقت الكلي المستغرق: ${totalTime} ثانية`
+/* ========= العداد ========= */
+function resetTimer(){
+timeLeft=70;
+document.getElementById("timer").innerText=timeLeft;
+clearInterval(timerInterval);
+timerInterval=setInterval(()=>{
+timeLeft--;
+totalSeconds++;
+document.getElementById("timer").innerText=timeLeft;
+if(timeLeft<=0){
+clearInterval(timerInterval);
+answersReview.push({
+question:selectedQuestions[currentIndex].question,
+correct:selectedQuestions[currentIndex].correct_answer,
+selected:"لم يجب"
+});
+nextQuestion();
+}
+},1000);
 }
 
-function showReview(){
-document.getElementById("resultScreen").style.display="none"
-document.getElementById("reviewScreen").style.display="block"
-
-let html=""
-answers.forEach((a,i)=>{
-let correctAnswer=a.question.correct
-html+=`<div style="text-align:right;margin-bottom:15px;">
-<b>س${i+1}:</b> ${a.question.question}<br>
-إجابتك:
-<span class="${a.user===correctAnswer?'correct':'wrong'}">
-${a.user!==null?a.question.options[a.user]:"لم يتم الإجابة"}
-</span><br>
-الإجابة الصحيحة:
-<span class="correct">${a.question.options[correctAnswer]}</span>
-<hr></div>`
-})
-
-document.getElementById("reviewContent").innerHTML=html
+/* ========= خلط ========= */
+function shuffle(array){
+for(let i=array.length-1;i>0;i--){
+const j=Math.floor(Math.random()*(i+1));
+[array[i],array[j]]=[array[j],array[i]];
+}
+return array;
 }
 
-function goHome(){ location.reload() }
-
+/* ========= رجوع ========= */
+function goHome(){
+location.reload();
+}
 </script>
 
 </body>
