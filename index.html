@@ -2,104 +2,222 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>نظام الاختبار</title>
+<title>نظام اختبار علوم الأرض</title>
+
 <style>
-body{font-family:Arial;background:#f4f6f9;text-align:center}
-.container{width:60%;margin:auto;background:#fff;padding:30px;margin-top:40px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,.1)}
-button{padding:10px 20px;margin:10px;cursor:pointer}
-.progress-bar{height:20px;background:#ddd;border-radius:10px;overflow:hidden;margin:20px 0}
-.progress{height:100%;background:#4CAF50;width:0%}
-.timer{color:red;font-size:18px;margin-bottom:10px}
-.option{display:block;margin:8px 0}
+body{
+font-family:Arial;
+background:#eef2f7;
+margin:0;
+text-align:center;
+}
+
+.container{
+width:80%;
+margin:auto;
+background:#ffffff;
+margin-top:30px;
+padding:30px;
+border-radius:12px;
+box-shadow:0 0 15px rgba(0,0,0,0.1);
+}
+
+button{
+padding:10px 20px;
+margin:10px;
+cursor:pointer;
+border:none;
+background:#4CAF50;
+color:white;
+border-radius:6px;
+font-size:15px;
+}
+
+button:hover{opacity:0.9;}
+
+input,select{
+padding:8px;
+margin:10px;
+width:250px;
+}
+
+.progress-bar{
+height:20px;
+background:#ddd;
+border-radius:10px;
+overflow:hidden;
+margin:20px 0;
+}
+
+.progress{
+height:100%;
+background:#4CAF50;
+width:0%;
+}
+
+.timer{
+color:red;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+.option{
+display:block;
+margin:8px 0;
+}
+
+.correct{color:green;font-weight:bold;}
+.wrong{color:red;font-weight:bold;}
+
+.footer{
+margin-top:20px;
+font-size:14px;
+color:#555;
+}
 </style>
 </head>
+
 <body>
 
 <div class="container">
+
 <h2>اختبار علوم الأرض</h2>
 
-<div id="start">
+<!-- شاشة البداية -->
+<div id="startScreen">
+<input type="text" id="studentName" placeholder="أدخل اسم الطالب"><br>
+
+<select id="unitSelect">
+<option value="galaxies.json">وحدة المجرات</option>
+<option value="earth.json">وحدة تاريخ الأرض</option>
+<option value="weather.json">وحدة أحوال الطقس القاسية</option>
+</select><br>
+
 <button onclick="startExam()">ابدأ الاختبار</button>
 </div>
 
-<div id="quiz" style="display:none;">
-<div class="timer">الوقت المتبقي: <span id="time">75</span></div>
-<div class="progress-bar"><div class="progress" id="progress"></div></div>
-<h3 id="question"></h3>
-<div id="options"></div>
+<!-- شاشة الاختبار -->
+<div id="quizScreen" style="display:none;">
+<h3 id="studentDisplay"></h3>
+<div class="timer">الوقت المتبقي: <span id="timeLeft">70</span> ثانية</div>
+<div class="progress-bar"><div class="progress" id="progressBar"></div></div>
+<h3 id="questionText"></h3>
+<div id="optionsBox"></div>
 <button onclick="nextQuestion()">التالي</button>
+<button onclick="goHome()">العودة للرئيسية</button>
 </div>
 
-<div id="result" style="display:none;">
+<!-- شاشة النتيجة -->
+<div id="resultScreen" style="display:none;">
 <h3>النتيجة النهائية</h3>
-<div id="resultText"></div>
-<button onclick="location.reload()">إعادة الاختبار</button>
+<div id="resultContent"></div>
+<button onclick="showReview()">مراجعة الإجابات</button>
+<button onclick="goHome()">العودة للرئيسية</button>
 </div>
+
+<!-- شاشة المراجعة -->
+<div id="reviewScreen" style="display:none;">
+<h3>مراجعة الإجابات</h3>
+<div id="reviewContent"></div>
+<button onclick="goHome()">العودة للرئيسية</button>
+</div>
+
+<div class="footer">إعداد المعلم محمد ملكاوي</div>
 
 </div>
 
 <script>
 
-let allQuestions=[]
 let questions=[]
 let current=0
 let score=0
 let timer
-let timeLeft=75
-let unanswered=0
+let timePerQuestion=70
+let timeLeft=70
+let student=""
+let startTime
+let totalTime=0
+let answers=[]
 
-async function loadQuestions(){
-const files=const files=[
-"المجرات.json",
-"تاريخ_الأرض.json",
-"احوال_الطقس_القاسية.json"
-]
-for(let file of files){
-let res=await fetch(file)
-let data=await res.json()
-allQuestions=allQuestions.concat(data)
-}
-}
-
-function shuffle(arr){
-return arr.sort(()=>Math.random()-0.5)
-}
-
+// ================= START EXAM =================
 async function startExam(){
-await loadQuestions()
-questions=shuffle([...allQuestions]).slice(0,50)
-document.getElementById("start").style.display="none"
-document.getElementById("quiz").style.display="block"
+
+student=document.getElementById("studentName").value.trim()
+if(student===""){
+alert("يرجى إدخال اسم الطالب")
+return
+}
+
+let file=document.getElementById("unitSelect").value
+let res=await fetch(file)
+let all=await res.json()
+
+// تقسيم حسب المستوى العربي
+let easy=all.filter(q=>q.level==="سهل")
+let medium=all.filter(q=>q.level==="متوسط")
+let hard=all.filter(q=>q.level==="صعب")
+
+function randomPick(arr,count){
+return arr.sort(()=>Math.random()-0.5).slice(0,count)
+}
+
+// توزيع 50 سؤال متوازن
+questions=[
+...randomPick(easy,20),
+...randomPick(medium,15),
+...randomPick(hard,15)
+]
+
+// خلط نهائي
+questions=questions.sort(()=>Math.random()-0.5)
+
+current=0
+score=0
+answers=[]
+startTime=Date.now()
+
+document.getElementById("startScreen").style.display="none"
+document.getElementById("quizScreen").style.display="block"
+document.getElementById("studentDisplay").innerText="الطالب: "+student
+
 showQuestion()
 }
 
+// ================= SHOW QUESTION =================
 function showQuestion(){
-if(current>=questions.length){showResult();return}
 
-timeLeft=75
-document.getElementById("time").textContent=timeLeft
+if(current>=50){
+showResult()
+return
+}
+
+timeLeft=timePerQuestion
+document.getElementById("timeLeft").textContent=timeLeft
 
 let q=questions[current]
-document.getElementById("question").textContent=`(${current+1}/50) ${q.question}`
+document.getElementById("questionText").innerText=
+`(${current+1}/50) ${q.question}`
 
 let html=""
 q.options.forEach((opt,i)=>{
-html+=`<label class="option">
-<input type="radio" name="opt" value="${i}">
+html+=`
+<label class="option">
+<input type="radio" name="option" value="${i}">
 ${opt}
 </label>`
 })
 
-document.getElementById("options").innerHTML=html
+document.getElementById("optionsBox").innerHTML=html
 updateProgress()
 startTimer()
 }
 
+// ================= TIMER =================
 function startTimer(){
 clearInterval(timer)
 timer=setInterval(()=>{
 timeLeft--
-document.getElementById("time").textContent=timeLeft
+document.getElementById("timeLeft").textContent=timeLeft
 if(timeLeft<=0){
 clearInterval(timer)
 nextQuestion()
@@ -107,48 +225,82 @@ nextQuestion()
 },1000)
 }
 
+// ================= NEXT QUESTION =================
 function nextQuestion(){
 clearInterval(timer)
 
-let selected=document.querySelector('input[name="opt"]:checked')
-if(selected){
-if(parseInt(selected.value)===questions[current].correct){
+let selected=document.querySelector('input[name="option"]:checked')
+let userAnswer=selected?parseInt(selected.value):null
+
+answers.push({
+question:questions[current],
+user:userAnswer
+})
+
+if(userAnswer===questions[current].correct){
 score++
-}
-}else{
-unanswered++
 }
 
 current++
 showQuestion()
 }
 
+// ================= PROGRESS =================
 function updateProgress(){
 let percent=(current/50)*100
-document.getElementById("progress").style.width=percent+"%"
+document.getElementById("progressBar").style.width=percent+"%"
 }
 
+// ================= RESULT =================
 function showResult(){
-document.getElementById("quiz").style.display="none"
-document.getElementById("result").style.display="block"
 
+document.getElementById("quizScreen").style.display="none"
+document.getElementById("resultScreen").style.display="block"
+
+totalTime=Math.floor((Date.now()-startTime)/1000)
 let percent=Math.round((score/50)*100)
 
-let grade=""
-if(percent>=90) grade="ممتاز"
-else if(percent>=80) grade="جيد جداً"
-else if(percent>=70) grade="جيد"
-else if(percent>=60) grade="مقبول"
-else grade="ضعيف"
-
-document.getElementById("resultText").innerHTML=
+document.getElementById("resultContent").innerHTML=
 `
-عدد الأسئلة: 50<br>
-الإجابات الصحيحة: ${score}<br>
-غير المجابة: ${unanswered}<br>
+الطالب: ${student}<br><br>
+عدد الإجابات الصحيحة: ${score} من 50<br>
 النسبة المئوية: ${percent}%<br>
-التقدير: ${grade}
+الوقت الكلي المستغرق: ${totalTime} ثانية
 `
+}
+
+// ================= REVIEW =================
+function showReview(){
+
+document.getElementById("resultScreen").style.display="none"
+document.getElementById("reviewScreen").style.display="block"
+
+let html=""
+
+answers.forEach((a,i)=>{
+let correctAnswer=a.question.correct
+html+=`
+<div style="text-align:right;margin-bottom:15px;">
+<b>س${i+1}:</b> ${a.question.question}<br>
+إجابتك:
+<span class="${a.user===correctAnswer?'correct':'wrong'}">
+${a.user!==null?a.question.options[a.user]:"لم يتم الإجابة"}
+</span><br>
+الإجابة الصحيحة:
+<span class="correct">
+${a.question.options[correctAnswer]}
+</span>
+<hr>
+</div>
+`
+})
+
+document.getElementById("reviewContent").innerHTML=html
+}
+
+// ================= HOME =================
+function goHome(){
+location.reload()
 }
 
 </script>
